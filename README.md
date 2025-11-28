@@ -28,7 +28,7 @@ bundle exec rake install
 
 ```bash
 # Basic usage (public repository)
-gitingest --repository user/repo 
+gitingest --repository user/repo
 
 # With GitHub token for private repositories
 gitingest --repository user/repo --token YOUR_GITHUB_TOKEN
@@ -109,7 +109,7 @@ generator = Gitingest::Generator.new(
   token: "YOUR_GITHUB_TOKEN",
   output_file: "my_prompt.txt",
   branch: "develop",
-  exclude: ["*.md", "docs/"], 
+  exclude: ["*.md", "docs/"],
   threads: 4,              # control concurrency
   thread_timeout: 120,     # custom thread timeout
   quiet: true              # or verbose: true
@@ -126,11 +126,13 @@ generator = Gitingest::Generator.new(
 ## Features
 
 - Fetches all files from a GitHub repository based on the given branch
+- **High Performance**: Optimized API usage with SHA-based blob fetching for faster content retrieval
 - Automatically excludes common binary files and system files by default
 - Allows custom exclusion patterns for specific file extensions or directories
 - Uses concurrent processing for faster downloads
 - Handles GitHub API rate limiting with automatic retry
 - Generates a clean, formatted output file with file paths and content
+- **Modular Architecture**: Clean, maintainable codebase with single-responsibility components
 
 ## Default Exclusion Patterns
 

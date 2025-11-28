@@ -20,31 +20,25 @@ RSpec.describe Gitingest::Generator do
     end
     let(:tree_data) do
       files_data.map do |f|
-        OpenStruct.new(path: f[:path], type: f[:type] == "file" ? "blob" : "tree")
+        OpenStruct.new(path: f[:path], type: f[:type] == "file" ? "blob" : "tree", sha: "sha_#{f[:path]}")
       end
     end
-    let(:mock_repo) { double("Repository", default_branch: "main") } # Mock repository object
-    let(:mock_branch) { double("Branch") } # Mock branch object
+    let(:mock_repo) { double("Repository", default_branch: "main") }
+    let(:mock_branch) { double("Branch") }
 
     before do
-      # Stub repository and branch validation calls
       allow(generator.client).to receive(:repository).with(repo_name).and_return(mock_repo)
       allow(generator.client).to receive(:branch).with(repo_name, "main").and_return(mock_branch)
-
-      # Stub tree fetching
       allow(generator.client).to receive(:tree).with(repo_name, "main",
                                                      recursive: true).and_return(double(tree: tree_data))
 
-      # Stub content fetching for each file expected to be processed
       files_data.each do |file_hash|
         next unless file_hash[:type] == "file"
 
-        # Create an OpenStruct to mimic the Sawyer::Resource object Octokit returns
-        content_struct = OpenStruct.new(content: file_hash[:content])
-        # Stub the contents call with the correct arguments (path and ref directly)
-        allow(generator.client).to receive(:contents)
-          .with(repo_name, path: file_hash[:path], ref: "main")
-          .and_return(content_struct)
+        blob_struct = OpenStruct.new(content: file_hash[:content], encoding: "base64")
+        allow(generator.client).to receive(:blob)
+          .with(repo_name, "sha_#{file_hash[:path]}")
+          .and_return(blob_struct)
       end
     end
 
