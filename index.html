@@ -1,71 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gitingest - Streamlined GitHub Repository Extraction</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gitingest — GitHub → LLM Prompt</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         :root {
-            --primary: #10B981;
-            --primary-dark: #059669;
-            --secondary: #8B5CF6;
-            --dark: #111827;
-            --darker: #0F172A;
-            --light: #F9FAFB;
-            --gray: #6B7280;
-            --light-gray: #E5E7EB;
-            --terminal-bg: rgba(15, 23, 42, 0.95);
-            --terminal-text: #A5F3FC;
-            --terminal-prompt: #10B981;
-            --terminal-cursor: #F9FAFB;
-            --cmd-output: #94A3B8;
+            --bg: #09090b;
+            --surface: #18181b;
+            --surface-2: #27272a;
+            --border: #3f3f46;
+            --text: #fafafa;
+            --muted: #a1a1aa;
+            --accent: #22c55e;
+            --accent-glow: rgba(34, 197, 94, 0.15);
+            --purple: #a855f7;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
+        html { scroll-behavior: smooth; }
 
         body {
-            background-color: var(--dark);
-            color: var(--light);
-            line-height: 1.6;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
             overflow-x: hidden;
-            position: relative;
         }
 
-        /* Grainy background effect */
-        .grain {
+        /* Gradient orb background */
+        .bg-glow {
             position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 100%;
+            top: -50%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
             pointer-events: none;
-            opacity: 0.03;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-            z-index: 100;
+            z-index: 0;
         }
 
-        header {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            padding: 1.5rem 0;
-            background-color: rgba(17, 24, 39, 0.8);
-            backdrop-filter: blur(10px);
-            z-index: 50;
-            transition: all 0.3s ease;
-        }
-
-        .header-container {
-            max-width: 1200px;
+        .container {
+            max-width: 900px;
             margin: 0 auto;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            padding: 1.25rem 0;
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(9, 9, 11, 0.8);
+        }
+
+        .header-inner {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -74,1050 +71,353 @@
         .logo {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.625rem;
+            text-decoration: none;
+            color: var(--text);
         }
 
         .logo-icon {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            width: 50px;
-            height: 50px;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--purple));
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.5rem;
-            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 1rem;
         }
 
         .logo-text {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .version-tag {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--primary);
-            padding: 0.2rem 0.6rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
+            font-size: 1.125rem;
             font-weight: 600;
-            margin-left: 0.5rem;
+            letter-spacing: -0.02em;
         }
 
-        nav ul {
+        .header-links {
             display: flex;
-            list-style: none;
-            gap: 2rem;
-        }
-
-        nav a {
-            color: var(--light);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.2s ease;
-            position: relative;
-        }
-
-        nav a:hover {
-            color: var(--primary);
-        }
-
-        nav a::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            bottom: -5px;
-            left: 0;
-            background-color: var(--primary);
-            transition: width 0.3s ease;
-        }
-
-        nav a:hover::after {
-            width: 100%;
-        }
-
-        .github-btn {
-            background-color: var(--darker);
-            color: var(--light);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 0.6rem 1.2rem;
-            border-radius: 8px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
             gap: 0.5rem;
-            transition: all 0.2s ease;
-            text-decoration: none;
         }
 
-        .github-btn:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-            transform: translateY(-2px);
-        }
-
-        .hero {
-            padding: 12rem 2rem 8rem;
-            background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15), rgba(17, 24, 39, 0) 50%);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .blobs {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: -1;
-        }
-
-        .blob {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-        }
-
-        .blob-1 {
-            top: -200px;
-            right: -200px;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-        }
-
-        .blob-2 {
-            bottom: -300px;
-            left: -200px;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(139, 92, 246, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-content {
-            max-width: 700px;
-            margin-bottom: 5rem;
-        }
-
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 800;
-            line-height: 1.2;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(90deg, #fff, #94A3B8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .headline {
-            color: var(--gray);
-            font-size: 1.25rem;
-            margin-bottom: 2rem;
-        }
-
-        .highlight {
-            color: var(--primary);
-            font-weight: 500;
-            position: relative;
-        }
-
-        .highlight::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 5px;
-            background-color: rgba(16, 185, 129, 0.2);
-            transform: translateY(2px);
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 3rem;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
+        .header-link {
+            padding: 0.5rem 1rem;
             border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            font-weight: 500;
             text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .header-link.ghost {
+            color: var(--muted);
+        }
+
+        .header-link.ghost:hover {
+            color: var(--text);
+            background: var(--surface);
+        }
+
+        .header-link.primary {
+            background: var(--text);
+            color: var(--bg);
+        }
+
+        .header-link.primary:hover {
+            opacity: 0.9;
+        }
+
+        /* Hero */
+        .hero {
+            padding: 6rem 0 4rem;
+            text-align: center;
+        }
+
+        .badge {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: var(--light);
-            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 15px 20px -3px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-outline {
-            background-color: transparent;
-            color: var(--light);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-outline:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-            transform: translateY(-2px);
-        }
-
-        /* Terminal simulation styles */
-        .terminal {
-            background-color: var(--terminal-bg);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
-            margin-top: 2rem;
-        }
-
-        .terminal-header {
-            background-color: rgba(15, 23, 42, 0.6);
-            padding: 1rem;
-            display: flex;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .terminal-controls {
-            display: flex;
-            gap: 0.5rem;
-            margin-right: 1rem;
-        }
-
-        .terminal-control {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
-        .terminal-close {
-            background-color: #FF5F56;
-        }
-
-        .terminal-minimize {
-            background-color: #FFBD2E;
-        }
-
-        .terminal-maximize {
-            background-color: #27C93F;
-        }
-
-        .terminal-title {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--gray);
-            flex: 1;
-            text-align: center;
-        }
-
-        .terminal-body {
-            padding: 1.5rem;
-            font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
-            font-size: 0.875rem;
-            line-height: 1.7;
-            overflow-x: auto;
-        }
-
-        .terminal-line {
-            margin-bottom: 0.75rem;
-            display: flex;
-        }
-
-        .terminal-prompt {
-            color: var(--terminal-prompt);
-            margin-right: 0.75rem;
-            font-weight: bold;
-        }
-
-        .terminal-command {
-            color: var(--terminal-text);
-        }
-
-        .terminal-output {
-            color: var(--cmd-output);
-            margin-left: 1.65rem;
+            padding: 0.375rem 0.875rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.8125rem;
+            color: var(--muted);
             margin-bottom: 1.5rem;
-            opacity: 0.8;
         }
 
-        .typing::after {
-            content: '|';
-            color: var(--terminal-cursor);
-            animation: blink 1s step-end infinite;
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
         }
 
-        @keyframes blink {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0;
-            }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
-        /* Features Section */
-        .features {
-            padding: 6rem 2rem;
-            background-color: var(--darker);
-        }
-
-        .section-header {
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-
-        .section-pretitle {
-            color: var(--primary);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 1rem;
-            font-size: 0.875rem;
-        }
-
-        .features h2 {
-            font-size: 2.5rem;
+        h1 {
+            font-size: clamp(2.5rem, 6vw, 4rem);
             font-weight: 700;
-            margin-bottom: 1.5rem;
-        }
-
-        .section-subtitle {
-            color: var(--gray);
-            font-size: 1.125rem;
-            max-width: 700px;
-            margin: 0 auto 2rem;
-        }
-
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        .feature-card {
-            background-color: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            border-radius: 12px;
-            padding: 2rem;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            border-color: rgba(16, 185, 129, 0.2);
-        }
-
-        .feature-icon {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(139, 92, 246, 0.1));
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-            color: var(--primary);
-            font-size: 1.5rem;
-        }
-
-        .feature-card h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        .feature-desc {
-            color: var(--gray);
-            font-size: 0.95rem;
-        }
-
-        /* Usage Section */
-        .usage {
-            padding: 6rem 2rem;
-            background-color: var(--dark);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .usage h2 {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .code-block {
-            background-color: rgba(255, 255, 255, 0.03);
-            border: 1px solid #fff;
-            margin-top: 1rem;
-            padding: 1rem;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-family: 'SF Mono', monospace;
-            font-size: 0.875rem;
-            line-height: 1.7;
-        }
-
-        /* Changelog Section */
-        .changelog {
-            padding: 6rem 2rem;
-            background-color: var(--darker);
-        }
-
-        .timeline {
-            max-width: 800px;
-            margin: 0 auto;
-            position: relative;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 32px;
-            top: 0;
-            height: 100%;
-            width: 2px;
-            background: linear-gradient(to bottom, var(--primary), var(--secondary));
-        }
-
-        .timeline-item {
-            margin-bottom: 3rem;
-            padding-left: 80px;
-            position: relative;
-        }
-
-        .timeline-date {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 64px;
-            height: 64px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            font-weight: 600;
-            line-height: 1.2;
-            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
-            color: var(--light);
-        }
-
-        .timeline-month {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-        }
-
-        .timeline-day {
-            font-size: 1.25rem;
-        }
-
-        .timeline-version {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .timeline-desc {
-            color: var(--gray);
-            font-size: 0.95rem;
-            margin-bottom: 1rem;
-        }
-
-        .timeline-list {
-            background-color: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            border-radius: 8px;
-            padding: 1.5rem;
-        }
-
-        .timeline-list li {
-            margin-bottom: 0.75rem;
-            color: var(--light-gray);
-            position: relative;
-            padding-left: 1.5rem;
-        }
-
-        .timeline-list li::before {
-            content: '•';
-            position: absolute;
-            left: 0;
-            top: 0;
-            color: var(--primary);
-            font-weight: bold;
-        }
-
-        /* Footer */
-        .footer {
-            background-color: var(--darker);
-            padding: 4rem 2rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .footer-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .footer-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .footer-logo-icon {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        .footer-desc {
-            color: var(--gray);
-            font-size: 0.95rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .social-links {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .social-link {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--light);
-            font-size: 1.25rem;
-            transition: all 0.2s ease;
-        }
-
-        .social-link:hover {
-            background-color: var(--primary);
-            transform: translateY(-3px);
-        }
-
-        .footer-title {
-            font-size: 1.125rem;
-            font-weight: 600;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
             margin-bottom: 1.25rem;
         }
 
+        .gradient-text {
+            background: linear-gradient(135deg, var(--text) 0%, var(--muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tagline {
+            font-size: 1.125rem;
+            color: var(--muted);
+            max-width: 540px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.6;
+        }
+
+        /* Install box */
+        .install-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.875rem 1.25rem;
+            margin-bottom: 3rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9375rem;
+        }
+
+        .install-box code {
+            color: var(--text);
+        }
+
+        .install-box .prompt {
+            color: var(--accent);
+        }
+
+        .copy-btn {
+            background: var(--surface-2);
+            border: none;
+            color: var(--muted);
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: grid;
+            place-items: center;
+        }
+
+        .copy-btn:hover {
+            color: var(--text);
+            background: var(--border);
+        }
+
+        .copy-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Demo section */
+        .demo {
+            padding: 0 0 6rem;
+        }
+
+        .demo-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 700px) {
+            .demo-grid { grid-template-columns: 1fr; }
+        }
+
+        .demo-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .demo-header {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .demo-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .demo-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--surface-2);
+        }
+
+        .demo-title {
+            flex: 1;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .demo-body {
+            padding: 1.25rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8125rem;
+            line-height: 1.8;
+            min-height: 200px;
+        }
+
+        .line { margin-bottom: 0.25rem; }
+        .comment { color: var(--muted); }
+        .cmd { color: var(--accent); }
+        .str { color: #fbbf24; }
+        .key { color: var(--purple); }
+        .dim { color: #52525b; }
+
+        /* Footer */
+        footer {
+            padding: 2rem 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
         .footer-links {
-            list-style: none;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
         }
 
-        .footer-links li {
-            margin-bottom: 0.75rem;
-        }
-
-        .footer-links a {
-            color: var(--gray);
+        .footer-link {
+            color: var(--muted);
             text-decoration: none;
-            transition: color 0.2s ease;
+            font-size: 0.875rem;
+            transition: color 0.15s;
         }
 
-        .footer-links a:hover {
-            color: var(--primary);
-        }
+        .footer-link:hover { color: var(--text); }
 
         .copyright {
-            max-width: 1200px;
-            margin: 2rem auto 0;
-            text-align: center;
-            color: var(--gray);
-            font-size: 0.875rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            padding-top: 2rem;
-        }
-
-        @media (max-width: 768px) {
-            .header-container {
-                padding: 0 1rem;
-            }
-
-            .hero {
-                padding: 10rem 2rem 6rem;
-            }
-
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-
-            .cta-buttons {
-                flex-direction: column;
-            }
-
-            .feature-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .footer-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .header-container {
-                padding: 0 1rem;
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            nav ul {
-                gap: 1rem;
-            }
+            font-size: 0.8125rem;
+            color: #52525b;
         }
     </style>
 </head>
-
 <body>
-    <div class="grain"></div>
+    <div class="bg-glow"></div>
 
     <header>
-        <div class="header-container">
-            <div class="logo">
+        <div class="container header-inner">
+            <a href="#" class="logo">
                 <div class="logo-icon">G</div>
-                <div class="logo-text">Gitingest <span class="version-tag">v0.7.1</span></div>
-            </div>
-            <nav>
-                <ul>
-                    <li><a href="#features">Features</a></li>
-                    <li><a href="#usage">Usage</a></li>
-                    <li><a href="#changelog">Changelog</a></li>
-                </ul>
-            </nav>
-            <a href="https://github.com/davidesantangelo/gitingest" class="github-btn">
-                <i class="fab fa-github"></i> GitHub
+                <span class="logo-text">Gitingest</span>
             </a>
+            <div class="header-links">
+                <a href="https://github.com/davidesantangelo/gitingest" class="header-link ghost">GitHub</a>
+                <a href="https://rubygems.org/gems/gitingest" class="header-link primary">Install</a>
+            </div>
         </div>
     </header>
 
-    <section class="hero">
-        <div class="blobs">
-            <div class="blob blob-1"></div>
-            <div class="blob blob-2"></div>
-        </div>
-        <div class="container">
-            <div class="hero-content">
-                <h1>Distill GitHub Repositories into Perfect LLM Prompts</h1>
-                <p class="headline">Gitingest is a <span class="highlight">powerful Ruby gem</span> that fetches
-                    repository files and generates consolidated text prompts optimized for large language models.</p>
-                <div class="cta-buttons">
-                    <a href="https://rubygems.org/gems/gitingest" class="btn btn-primary">
-                        <i class="fas fa-gem"></i> Install from RubyGems
-                    </a>
-                    <a href="#usage" class="btn btn-outline">
-                        <i class="fas fa-book"></i> Documentation
-                    </a>
-                </div>
+    <main>
+        <section class="hero container">
+            <div class="badge">
+                <span class="badge-dot"></span>
+                v0.7.1 — Now with concurrent processing
             </div>
-            <div class="terminal">
-                <div class="terminal-header">
-                    <div class="terminal-controls">
-                        <div class="terminal-control terminal-close"></div>
-                        <div class="terminal-control terminal-minimize"></div>
-                        <div class="terminal-control terminal-maximize"></div>
-                    </div>
-                    <div class="terminal-title">zsh - gitingest</div>
-                </div>
-                <div class="terminal-body">
-                    <div class="terminal-line">
-                        <span class="terminal-prompt">$</span>
-                        <span class="terminal-command">gem install gitingest</span>
-                    </div>
-                    <div class="terminal-output">
-                        Successfully installed gitingest-0.7.1<br />
-                        1 gem installed
-                    </div>
-                    <div class="terminal-line">
-                        <span class="terminal-prompt">$</span>
-                        <span class="terminal-command">gitingest --repository user/repo --token $GITHUB_TOKEN</span>
-                    </div>
-                    <div class="terminal-output">
-                        Fetching repository: user/repo (branch: main)<br />
-                        Found 87 files (excluding system and binary files)<br />
-                        [====================] 100% | ETA: 0s | 87/87 files<br />
-                        Prompt generated: repo_prompt.txt (254 KB)
-                    </div>
-                    <div class="terminal-line">
-                        <span class="terminal-prompt">$</span>
-                        <span class="terminal-command typing">gitingest --repository user/repo --show-structure</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="features" id="features">
-        <div class="container">
-            <div class="section-header">
-                <p class="section-pretitle">Why Use Gitingest</p>
-                <h2>Streamlined Repository Extraction</h2>
-                <p class="section-subtitle">Extract the essence of any GitHub codebase with precision and transform it
-                    into the perfect context for LLM prompting.</p>
-            </div>
-            <div class="feature-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <h3>Concurrent Processing</h3>
-                    <p class="feature-desc">Utilizes configurable thread counts to accelerate downloads and
-                        intelligently prioritize files for optimal concurrency.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-filter"></i>
-                    </div>
-                    <h3>Smart Filtering</h3>
-                    <p class="feature-desc">Automatically excludes unnecessary binary and system files while supporting
-                        custom exclusion patterns to fit your needs.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h3>Real-Time Progress</h3>
-                    <p class="feature-desc">Visual progress indicators display processing speed, ETA, and file counts,
-                        keeping you informed every step of the way.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-sitemap"></i>
-                    </div>
-                    <h3>Directory Visualization</h3>
-                    <p class="feature-desc">Generate a tree-view of the repository structure to easily navigate and
-                        understand codebase organization.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-code"></i>
-                    </div>
-                    <h3>Clean Code Output</h3>
-                    <p class="feature-desc">Produces a well-organized, consolidated text prompt that’s perfect for
-                        feeding into large language models.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="usage" id="usage">
-        <div class="container">
-            <h2>Usage</h2>
-            <p>
-                Integrate Gitingest seamlessly into your workflow. Whether you install via RubyGems or clone the
-                repository, the CLI lets you extract repository content quickly and effortlessly.
+            <h1><span class="gradient-text">GitHub repos to<br>LLM-ready prompts.</span></h1>
+            <p class="tagline">
+                A Ruby gem that fetches repository files and outputs a clean, 
+                consolidated text file — optimized for ChatGPT, Claude, and any LLM.
             </p>
-            <div class="code-block-wrapper" style="position: relative;">
-                <button class="copy-btn" onclick="copyUsageCode()" title="Copy code" style="
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: rgba(255, 255, 255, 0.1);
-                border: none;
-                color: var(--gray);
-                width: 32px;
-                height: 32px;
-                border-radius: 6px;
-                cursor: pointer;
-                transition: background 0.2s ease;
-              ">
-                    <i class="fas fa-copy"></i>
+            <div class="install-box">
+                <code><span class="prompt">$</span> gem install gitingest</code>
+                <button class="copy-btn" onclick="navigator.clipboard.writeText('gem install gitingest')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
                 </button>
-                <div class="code-block">
-                    <pre><code id="usage-code"># Install from RubyGems
-gem install gitingest
+            </div>
+        </section>
 
-# Clone from GitHub and install dependencies
-git clone https://github.com/davidesantangelo/gitingest.git
-cd gitingest
-bundle install
-bundle exec rake install
-
-# Basic usage for public repositories
-gitingest --repository user/repo
-
-# Using a GitHub token for private repositories
-gitingest --repository user/repo --token YOUR_GITHUB_TOKEN
-
-# Generate repository prompt and show structure
-gitingest --repository user/repo --show-structure</code></pre>
+        <section class="demo container">
+            <p class="demo-label">How it works</p>
+            <div class="demo-grid">
+                <div class="demo-card">
+                    <div class="demo-header">
+                        <div class="demo-dots">
+                            <div class="demo-dot"></div>
+                            <div class="demo-dot"></div>
+                            <div class="demo-dot"></div>
+                        </div>
+                        <span class="demo-title">terminal</span>
+                    </div>
+                    <div class="demo-body">
+                        <div class="line"><span class="cmd">$</span> gitingest -r rails/rails</div>
+                        <div class="line dim">Fetching repository...</div>
+                        <div class="line dim">Found 2,847 files</div>
+                        <div class="line dim">━━━━━━━━━━━━━━━━ 100%</div>
+                        <div class="line"><span class="cmd">✓</span> rails_prompt.txt <span class="dim">(4.2 MB)</span></div>
+                    </div>
+                </div>
+                <div class="demo-card">
+                    <div class="demo-header">
+                        <div class="demo-dots">
+                            <div class="demo-dot"></div>
+                            <div class="demo-dot"></div>
+                            <div class="demo-dot"></div>
+                        </div>
+                        <span class="demo-title">rails_prompt.txt</span>
+                    </div>
+                    <div class="demo-body">
+                        <div class="line comment"># File: lib/rails.rb</div>
+                        <div class="line dim">─────────────────────────</div>
+                        <div class="line"><span class="key">require</span> <span class="str">"rails/version"</span></div>
+                        <div class="line"><span class="key">module</span> Rails</div>
+                        <div class="line">  <span class="key">def self</span>.env</div>
+                        <div class="line">    <span class="str">@env</span> ||= ActiveSupport...</div>
+                        <div class="line"><span class="key">end</span></div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
-    <script>
-        function copyUsageCode() {
-            const code = document.getElementById("usage-code").innerText;
-            navigator.clipboard.writeText(code).then(() => {
-                // Provide visual feedback (e.g., a temporary alert)
-                alert("Code copied to clipboard!");
-            }).catch(err => {
-                console.error("Failed to copy code: ", err);
-            });
-        }
-    </script>
+        </section>
+    </main>
 
-
-    <section class="changelog" id="changelog">
+    <footer>
         <div class="container">
-            <h2>Changelog</h2>
-            <div class="timeline">
-                <div class="timeline-item">
-                    <div class="timeline-date">
-                        <span class="timeline-month">Jun</span>
-                        <span class="timeline-day">20</span>
-                    </div>
-                    <div class="timeline-content">
-                        <h3 class="timeline-version">v0.7.1</h3>
-                        <p class="timeline-desc">Minor internal code refactoring for better readability.</p>
-                        <div class="timeline-list">
-                            <ul>
-                                <li>Refactored the file prioritization logic to be more readable and maintainable.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-date">
-                        <span class="timeline-month">Jun</span>
-                        <span class="timeline-day">04</span>
-                    </div>
-                    <div class="timeline-content">
-                        <h3 class="timeline-version">v0.7.0</h3>
-                        <p class="timeline-desc">Improved file exclusion logic and debug logging.</p>
-                        <div class="timeline-list">
-                            <ul>
-                                <li>Improved file exclusion logic for glob patterns to correctly match files at any
-                                    directory depth (e.g., <code>*.md</code> now correctly matches
-                                    <code>docs/file.md</code>).
-                                </li>
-                                <li>Refined internal handling of exclusion patterns for clarity and robustness, using
-                                    <code>File.fnmatch</code> for all custom glob patterns.
-                                </li>
-                                <li>Enhanced debug logging for file exclusion to show the specific pattern that caused a
-                                    match.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-date">
-                        <span class="timeline-month">Apr</span>
-                        <span class="timeline-day">14</span>
-                    </div>
-                    <div class="timeline-content">
-                        <h3 class="timeline-version">v0.6.3</h3>
-                        <p class="timeline-desc">Fixed directory exclusion pattern to properly handle paths ending with
-                            slash.</p>
-                        <div class="timeline-list">
-                            <ul>
-                                <li>Enhanced file exclusion logic to correctly filter directories when patterns end with
-                                    '/'</li>
-                                <li>Improved spec test coverage for directory exclusion patterns</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-date">
-                        <span class="timeline-month">Apr</span>
-                        <span class="timeline-day">11</span>
-                    </div>
-                    <div class="timeline-content">
-                        <h3 class="timeline-version">v0.6.2</h3>
-                        <p class="timeline-desc">Updated dependencies to improve compatibility and performance.</p>
-                        <div class="timeline-list">
-                            <ul>
-                                <li>Updated Octokit dependency from ~> 5.0 to ~> 9.0</li>
-                                <li>Updated various gem dependencies to their latest versions</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-date">
-                        <span class="timeline-month">Mar</span>
-                        <span class="timeline-day">26</span>
-                    </div>
-                    <div class="timeline-content">
-                        <h3 class="timeline-version">v0.6.1</h3>
-                        <p class="timeline-desc">Fixed error in exclude patterns functionality when using glob patterns.
-                        </p>
-                        <div class="timeline-list">
-                            <ul>
-                                <li>Fixed error "target of repeat operator is not specified" when using
-                                    <code>--exclude</code> with glob patterns like <code>*.md</code>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-date">
-                        <span class="timeline-month">Mar</span>
-                        <span class="timeline-day">18</span>
-                    </div>
-                    <div class="timeline-content">
-                        <h3 class="timeline-version">v0.6.0</h3>
-                        <p class="timeline-desc">Improved default branch handling and enhanced repository validation
-                            with better error handling.</p>
-                        <div class="timeline-list">
-                            <ul>
-                                <li>Use repository's actual default branch instead of hardcoding "main"</li>
-                                <li>Enhanced error handling in repository access validation</li>
-                                <li>Updated documentation for default branch behavior</li>
-                                <li>Fixed repository validation in test environment</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-date">
-                        <span class="timeline-month">Mar</span>
-                        <span class="timeline-day">10</span> <!-- Corrected day based on CHANGELOG.md -->
-                    </div>
-                    <div class="timeline-content">
-                        <h3 class="timeline-version">v0.5.0</h3>
-                        <p class="timeline-desc">Introduced repository directory structure visualization, added
-                            DirectoryStructureBuilder, and improved concurrent processing with thread management.</p>
-                        <div class="timeline-list">
-                            <ul>
-                                <li>Added <code>--show-structure</code> option</li>
-                                <li>Created <code>DirectoryStructureBuilder</code> class</li>
-                                <li>Integrated directory tree view generation</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-date">
-                        <span class="timeline-month">Mar</span>
-                        <span class="timeline-day">03</span> <!-- Corrected day based on CHANGELOG.md -->
-                    </div>
-                    <div class="timeline-content">
-                        <h3 class="timeline-version">v0.4.0</h3>
-                        <p class="timeline-desc">Implemented in-memory prompt generation, visual progress bar, and
-                            enhanced multithreaded operations.</p>
-                        <div class="timeline-list">
-                            <ul>
-                                <li>Added <code>generate_prompt</code> method</li>
-                                <li>Integrated visual progress bar</li>
-                                <li>Improved logging and error handling</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-date">
-                        <span class="timeline-month">Mar</span>
-                        <span class="timeline-day">03</span>
-                    </div>
-                    <div class="timeline-content">
-                        <h3 class="timeline-version">v0.3.1</h3>
-                        <p class="timeline-desc">Optimized threading with configurable options and introduced
-                            exponential backoff for API requests.</p>
-                        <div class="timeline-list">
-                            <ul>
-                                <li>Configurable threading options</li>
-                                <li>Added thread-local buffers</li>
-                                <li>Improved file exclusion performance</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+            <div class="footer-links">
+                <a href="https://github.com/davidesantangelo/gitingest" class="footer-link">GitHub</a>
+                <a href="https://rubygems.org/gems/gitingest" class="footer-link">RubyGems</a>
+                <a href="https://github.com/davidesantangelo/gitingest/blob/main/LICENSE.txt" class="footer-link">MIT License</a>
             </div>
-        </div>
-        </div>
-    </section>
-
-    <footer class="footer">
-        <div class="footer-grid">
-            <div>
-                <div class="footer-logo">
-                    <div class="footer-logo-icon">G</div>
-                    <div class="logo-text">Gitingest</div>
-                </div>
-                <p class="footer-desc">A powerful Ruby gem to distill GitHub repositories into optimal prompts for LLMs.
-                </p>
-                <div class="social-links">
-                    <a href="https://github.com/davidesantangelo/gitingest" class="social-link" target="_blank"
-                        rel="noopener"><i class="fab fa-github"></i></a>
-                    <a href="https://rubygems.org/gems/gitingest" class="social-link" target="_blank" rel="noopener"><i
-                            class="fas fa-gem"></i></a>
-                </div>
-            </div>
-            <div>
-                <h3 class="footer-title">Features</h3>
-                <ul class="footer-links">
-                    <li><a href="#features">Concurrent Processing</a></li>
-                    <li><a href="#features">Smart Filtering</a></li>
-                    <li><a href="#features">Real-Time Progress</a></li>
-                    <li><a href="#features">Directory Visualization</a></li>
-                </ul>
-            </div>
-            <div>
-                <h3 class="footer-title">Usage</h3>
-                <ul class="footer-links">
-                    <li><a href="#usage">Installation</a></li>
-                    <li><a href="#usage">Command Line</a></li>
-                    <li><a href="#usage">Library Integration</a></li>
-                </ul>
-            </div>
-            <div>
-                <h3 class="footer-title">Resources</h3>
-                <ul class="footer-links">
-                    <li><a href="https://github.com/davidesantangelo/gitingest" target="_blank"
-                            rel="noopener">GitHub</a></li>
-                    <li><a href="https://rubygems.org/gems/gitingest" target="_blank" rel="noopener">RubyGems</a></li>
-                    <li><a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener">MIT License</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-        <div class="copyright">
-            © 2025 David Santangelo. All rights reserved.
+            <p class="copyright">© 2025 Davide Santangelo</p>
         </div>
     </footer>
 </body>
-
 </html>
