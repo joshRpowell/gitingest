@@ -2,23 +2,10 @@
 
 require "octokit"
 require "logger"
-require "ipaddr"
 
 module Gitingest
   class Generator
     attr_reader :options, :client, :repo_files, :logger
-
-    # Blocked hostnames for SSRF protection
-    BLOCKED_HOSTS = %w[localhost].freeze
-
-    # Private/internal IP ranges that should be blocked to prevent SSRF attacks
-    PRIVATE_IP_RANGES = [
-      IPAddr.new('127.0.0.0/8'),      # Loopback
-      IPAddr.new('10.0.0.0/8'),       # Private Class A
-      IPAddr.new('172.16.0.0/12'),    # Private Class B
-      IPAddr.new('192.168.0.0/16'),   # Private Class C
-      IPAddr.new('169.254.0.0/16')    # Link-local (cloud metadata)
-    ].freeze
 
     # Initialize a new Generator with the given options
     #
@@ -126,35 +113,17 @@ module Gitingest
     end
 
     # Validate if the provided API endpoint is a proper URL
-    # Includes SSRF protection to block private/internal IP ranges and localhost
     def validate_api_endpoint
       endpoint = @options[:api_endpoint]
+      uri = URI.parse(endpoint)
 
-      unless valid_api_endpoint?(endpoint)
-        raise ArgumentError, "Invalid API endpoint URL. Must be a valid HTTPS URL"
+      unless uri.is_a?(URI::HTTP) && uri.host && !uri.host.empty?
+        raise ArgumentError, "Invalid API endpoint URL"
       end
 
       @logger.info "Using GitHub Enterprise API endpoint: #{endpoint}"
-    end
-
-    # Check if the provided API endpoint is a proper URL
-    # Includes SSRF protection to block private/internal IP ranges and localhost
-    def valid_api_endpoint?(url)
-      uri = URI.parse(url)
-      return false unless uri.is_a?(URI::HTTP) && uri.scheme == 'https' && !uri.host.nil? && !uri.host.empty?
-      return false if BLOCKED_HOSTS.include?(uri.host.downcase)
-
-      # Check if host is an IP address and block private ranges
-      begin
-        ip = IPAddr.new(uri.host)
-        return false if PRIVATE_IP_RANGES.any? { |range| range.include?(ip) }
-      rescue IPAddr::InvalidAddressError
-        # Host is a domain name, not an IP - allow it
-      end
-
-      true
     rescue URI::InvalidURIError
-      false
+      raise ArgumentError, "Invalid API endpoint URL"
     end
 
     # Create Octokit client with authentication and API endpoint options

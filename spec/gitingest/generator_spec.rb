@@ -51,146 +51,37 @@ RSpec.describe Gitingest::Generator do
     end
   end
 
-  describe "#valid_api_endpoint? (SSRF protection)" do
-    let(:options) { { repository: repo_name, token: "fake_token" } }
-    let(:generator) { described_class.new(**options) }
-
-    # Valid endpoints that should be allowed
-    describe "allows valid HTTPS endpoints" do
-      it "accepts valid GitHub Enterprise endpoints" do
-        expect(generator.send(:valid_api_endpoint?, "https://github.example.com/api/v3/")).to be true
-      end
-
-      it "accepts valid public domain endpoints" do
-        expect(generator.send(:valid_api_endpoint?, "https://api.github.com/")).to be true
-      end
-
-      it "accepts endpoints with ports" do
-        expect(generator.send(:valid_api_endpoint?, "https://github.example.com:8443/api/v3/")).to be true
-      end
+  describe "api_endpoint validation" do
+    it "accepts valid URLs" do
+      generator = described_class.new(repository: repo_name, api_endpoint: "https://github.example.com/api/v3/")
+      expect(generator.client.api_endpoint).to eq("https://github.example.com/api/v3/")
     end
 
-    # Invalid endpoints that should be blocked
-    describe "blocks invalid or insecure endpoints" do
-      it "rejects HTTP endpoints" do
-        expect(generator.send(:valid_api_endpoint?, "http://github.example.com/api/v3/")).to be false
-      end
-
-      it "rejects malformed URLs" do
-        expect(generator.send(:valid_api_endpoint?, "not-a-url")).to be false
-      end
-
-      it "rejects empty URLs" do
-        expect(generator.send(:valid_api_endpoint?, "")).to be false
-      end
-
-      it "rejects URLs without host" do
-        expect(generator.send(:valid_api_endpoint?, "https:///path")).to be false
-      end
+    it "accepts URLs with ports" do
+      generator = described_class.new(repository: repo_name, api_endpoint: "https://github.example.com:8443/api/v3/")
+      expect(generator.client.api_endpoint).to eq("https://github.example.com:8443/api/v3/")
     end
 
-    # SSRF protection - blocked hostnames
-    describe "blocks localhost (SSRF protection)" do
-      it "rejects localhost" do
-        expect(generator.send(:valid_api_endpoint?, "https://localhost/api/v3/")).to be false
-      end
-
-      it "rejects localhost with port" do
-        expect(generator.send(:valid_api_endpoint?, "https://localhost:8443/api/v3/")).to be false
-      end
-
-      it "rejects LOCALHOST (case insensitive)" do
-        expect(generator.send(:valid_api_endpoint?, "https://LOCALHOST/api/v3/")).to be false
-      end
+    it "accepts private IP addresses for GHE on internal networks" do
+      generator = described_class.new(repository: repo_name, api_endpoint: "https://10.0.1.50/api/v3/")
+      expect(generator.client.api_endpoint).to eq("https://10.0.1.50/api/v3/")
     end
 
-    # SSRF protection - loopback IPs (127.0.0.0/8)
-    describe "blocks loopback IPs (SSRF protection)" do
-      it "rejects 127.0.0.1" do
-        expect(generator.send(:valid_api_endpoint?, "https://127.0.0.1/api/v3/")).to be false
-      end
-
-      it "rejects 127.0.0.1 with port" do
-        expect(generator.send(:valid_api_endpoint?, "https://127.0.0.1:8443/api/v3/")).to be false
-      end
-
-      it "rejects other 127.x.x.x addresses" do
-        expect(generator.send(:valid_api_endpoint?, "https://127.1.2.3/api/v3/")).to be false
-      end
+    it "accepts localhost for local development" do
+      generator = described_class.new(repository: repo_name, api_endpoint: "https://localhost/api/v3/")
+      expect(generator.client.api_endpoint).to eq("https://localhost/api/v3/")
     end
 
-    # SSRF protection - Private Class A (10.0.0.0/8)
-    describe "blocks private Class A IPs (SSRF protection)" do
-      it "rejects 10.0.0.1" do
-        expect(generator.send(:valid_api_endpoint?, "https://10.0.0.1/api/v3/")).to be false
-      end
-
-      it "rejects 10.255.255.255" do
-        expect(generator.send(:valid_api_endpoint?, "https://10.255.255.255/api/v3/")).to be false
-      end
+    it "rejects malformed URLs" do
+      expect do
+        described_class.new(repository: repo_name, api_endpoint: "not-a-url")
+      end.to raise_error(ArgumentError, /Invalid API endpoint URL/)
     end
 
-    # SSRF protection - Private Class B (172.16.0.0/12)
-    describe "blocks private Class B IPs (SSRF protection)" do
-      it "rejects 172.16.0.1" do
-        expect(generator.send(:valid_api_endpoint?, "https://172.16.0.1/api/v3/")).to be false
-      end
-
-      it "rejects 172.31.255.255" do
-        expect(generator.send(:valid_api_endpoint?, "https://172.31.255.255/api/v3/")).to be false
-      end
-
-      it "allows 172.15.0.1 (outside private range)" do
-        expect(generator.send(:valid_api_endpoint?, "https://172.15.0.1/api/v3/")).to be true
-      end
-
-      it "allows 172.32.0.1 (outside private range)" do
-        expect(generator.send(:valid_api_endpoint?, "https://172.32.0.1/api/v3/")).to be true
-      end
-    end
-
-    # SSRF protection - Private Class C (192.168.0.0/16)
-    describe "blocks private Class C IPs (SSRF protection)" do
-      it "rejects 192.168.0.1" do
-        expect(generator.send(:valid_api_endpoint?, "https://192.168.0.1/api/v3/")).to be false
-      end
-
-      it "rejects 192.168.255.255" do
-        expect(generator.send(:valid_api_endpoint?, "https://192.168.255.255/api/v3/")).to be false
-      end
-    end
-
-    # SSRF protection - Link-local/Cloud metadata (169.254.0.0/16)
-    describe "blocks link-local/cloud metadata IPs (SSRF protection)" do
-      it "rejects 169.254.0.1" do
-        expect(generator.send(:valid_api_endpoint?, "https://169.254.0.1/api/v3/")).to be false
-      end
-
-      it "rejects 169.254.169.254 (AWS metadata endpoint)" do
-        expect(generator.send(:valid_api_endpoint?, "https://169.254.169.254/api/v3/")).to be false
-      end
-    end
-
-    # Verify initialization fails with SSRF-blocked endpoints
-    describe "initialization with blocked endpoints" do
-      it "raises ArgumentError for localhost endpoint" do
-        expect do
-          described_class.new(repository: repo_name, token: "fake_token", api_endpoint: "https://localhost/api/v3/")
-        end.to raise_error(ArgumentError, /Invalid API endpoint URL/)
-      end
-
-      it "raises ArgumentError for private IP endpoint" do
-        expect do
-          described_class.new(repository: repo_name, token: "fake_token", api_endpoint: "https://192.168.1.1/api/v3/")
-        end.to raise_error(ArgumentError, /Invalid API endpoint URL/)
-      end
-
-      it "raises ArgumentError for cloud metadata endpoint" do
-        expect do
-          described_class.new(repository: repo_name, token: "fake_token",
-                              api_endpoint: "https://169.254.169.254/latest/meta-data/")
-        end.to raise_error(ArgumentError, /Invalid API endpoint URL/)
-      end
+    it "rejects URLs without host" do
+      expect do
+        described_class.new(repository: repo_name, api_endpoint: "https:///path")
+      end.to raise_error(ArgumentError, /Invalid API endpoint URL/)
     end
   end
 end
