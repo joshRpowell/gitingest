@@ -28,11 +28,11 @@ module Gitingest
 
       files
     rescue Octokit::Unauthorized
-      raise "Authentication error: Invalid or expired GitHub token."
+      raise "Authentication error: Invalid or expired GitHub token"
     rescue Octokit::NotFound
-      raise "Repository not found: '#{@repository}' or branch '#{@branch}' doesn't exist or is private."
-    rescue Octokit::Error => e
-      raise "Error accessing repository: #{e.message}"
+      raise "Repository not found or is private"
+    rescue Octokit::Error
+      raise "Error accessing repository. Please check your credentials and repository name"
     end
 
     private
@@ -44,12 +44,12 @@ module Gitingest
       begin
         @client.branch(@repository, @branch)
       rescue Octokit::NotFound
-        raise "Branch '#{@branch}' not found in repository '#{@repository}'"
+        raise "Branch not found in repository"
       end
     rescue Octokit::Unauthorized
       raise "Authentication error: Invalid or expired GitHub token"
     rescue Octokit::NotFound
-      raise "Repository '#{@repository}' not found or is private. Check the repository name or provide a valid token."
+      raise "Repository not found or is private"
     end
   end
 end

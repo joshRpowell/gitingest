@@ -2,10 +2,39 @@
 
 require "octokit"
 require "logger"
+require "ipaddr"
 
 module Gitingest
   class Generator
     attr_reader :options, :client, :repo_files, :logger
+
+    # Blocked hostnames for SSRF protection
+    BLOCKED_HOSTS = %w[localhost].freeze
+
+    # Private/internal IP ranges that should be blocked to prevent SSRF attacks
+    PRIVATE_IP_RANGES = [
+      IPAddr.new('127.0.0.0/8'),      # Loopback
+      IPAddr.new('10.0.0.0/8'),       # Private Class A
+      IPAddr.new('172.16.0.0/12'),    # Private Class B
+      IPAddr.new('192.168.0.0/16'),   # Private Class C
+      IPAddr.new('169.254.0.0/16')    # Link-local (cloud metadata)
+    ].freeze
+
+    # Initialize a new Generator with the given options
+    #
+    # @param options [Hash] Configuration options
+    # @option options [String] :repository GitHub repository in format "username/repo"
+    # @option options [String] :token GitHub personal access token
+    # @option options [String] :branch Repository branch (default: "main")
+    # @option options [String] :output_file Output file path
+    # @option options [Array<String>] :exclude Additional patterns to exclude
+    # @option options [Boolean] :quiet Reduce logging to errors only
+    # @option options [Boolean] :verbose Increase logging verbosity
+    # @option options [Logger] :logger Custom logger instance
+    # @option options [Integer] :threads Number of threads to use (default: auto-detected)
+    # @option options [Integer] :thread_timeout Seconds to wait for thread pool shutdown (default: 60)
+    # @option options [Boolean] :show_structure Show repository directory structure (default: false)
+    # @option options [String] :api_endpoint GitHub Enterprise API endpoint URL (e.g., "https://github.example.com/api/v3/")
 
     def initialize(options = {})
       @options = options
@@ -89,7 +118,56 @@ module Gitingest
     end
 
     def configure_client
-      @client = @options[:token] ? Octokit::Client.new(access_token: @options[:token]) : Octokit::Client.new
+      validate_api_endpoint if @options[:api_endpoint]
+
+      create_client
+
+      log_authentication_details
+    end
+
+    # Validate if the provided API endpoint is a proper URL
+    # Includes SSRF protection to block private/internal IP ranges and localhost
+    def validate_api_endpoint
+      endpoint = @options[:api_endpoint]
+
+      unless valid_api_endpoint?(endpoint)
+        raise ArgumentError, "Invalid API endpoint URL. Must be a valid HTTPS URL"
+      end
+
+      @logger.info "Using GitHub Enterprise API endpoint: #{endpoint}"
+    end
+
+    # Check if the provided API endpoint is a proper URL
+    # Includes SSRF protection to block private/internal IP ranges and localhost
+    def valid_api_endpoint?(url)
+      uri = URI.parse(url)
+      return false unless uri.is_a?(URI::HTTP) && uri.scheme == 'https' && !uri.host.nil? && !uri.host.empty?
+      return false if BLOCKED_HOSTS.include?(uri.host.downcase)
+
+      # Check if host is an IP address and block private ranges
+      begin
+        ip = IPAddr.new(uri.host)
+        return false if PRIVATE_IP_RANGES.any? { |range| range.include?(ip) }
+      rescue IPAddr::InvalidAddressError
+        # Host is a domain name, not an IP - allow it
+      end
+
+      true
+    rescue URI::InvalidURIError
+      false
+    end
+
+    # Create Octokit client with authentication and API endpoint options
+    # Thread-safe: passes api_endpoint directly to client instead of global config
+    def create_client
+      client_options = {}
+      client_options[:access_token] = @options[:token] if @options[:token]
+      client_options[:api_endpoint] = @options[:api_endpoint] if @options[:api_endpoint]
+      @client = Octokit::Client.new(client_options)
+    end
+
+    # Log authentication status
+    def log_authentication_details
       if @options[:token]
         @logger.info "Using provided GitHub token for authentication"
       else
