@@ -44,6 +44,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday-retry", "~> 2.0" # Add this line
   spec.add_dependency "octokit", "~> 9.0"
   spec.add_dependency "optparse", "~> 0.1"
+  spec.add_dependency "ostruct"
 
   # Development dependencies
   spec.add_development_dependency "bundler", ">= 2.0"

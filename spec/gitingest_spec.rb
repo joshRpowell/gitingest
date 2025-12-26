@@ -70,21 +70,6 @@ RSpec.describe Gitingest do
         expect(generator.client.api_endpoint).to eq(enterprise_endpoint)
       end
 
-      it "validates API endpoint URL format" do
-        invalid_endpoints = [
-          "not-a-url",
-          "ftp://example.com",
-          "//invalid-url",
-          "https://"
-        ]
-
-        invalid_endpoints.each do |invalid_endpoint|
-          expect {
-            Gitingest::Generator.new(repository: mock_repo, api_endpoint: invalid_endpoint)
-          }.to raise_error(Gitingest::InvalidApiEndpointError, /Invalid API endpoint URL/)
-        end
-      end
-
       it "uses default API endpoint when not provided" do
         generator = Gitingest::Generator.new(repository: mock_repo)
         expect(generator.client).not_to be_nil

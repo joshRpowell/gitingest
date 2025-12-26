@@ -121,6 +121,10 @@ module Gitingest
         raise InvalidApiEndpointError, "Invalid API endpoint URL"
       end
 
+      if uri.scheme == 'http'
+        @logger.warn "WARNING: Using unencrypted HTTP. Token may be exposed to network attackers."
+      end
+
       @logger.info "Using GitHub Enterprise API endpoint: #{endpoint}"
     rescue URI::InvalidURIError
       raise InvalidApiEndpointError, "Invalid API endpoint URL"
