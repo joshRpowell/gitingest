@@ -81,7 +81,7 @@ RSpec.describe Gitingest do
         invalid_endpoints.each do |invalid_endpoint|
           expect {
             Gitingest::Generator.new(repository: mock_repo, api_endpoint: invalid_endpoint)
-          }.to raise_error(ArgumentError, /Invalid API endpoint URL/)
+          }.to raise_error(Gitingest::InvalidApiEndpointError, /Invalid API endpoint URL/)
         end
       end
 

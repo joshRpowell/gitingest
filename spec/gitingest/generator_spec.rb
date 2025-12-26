@@ -75,13 +75,13 @@ RSpec.describe Gitingest::Generator do
     it "rejects malformed URLs" do
       expect do
         described_class.new(repository: repo_name, api_endpoint: "not-a-url")
-      end.to raise_error(ArgumentError, /Invalid API endpoint URL/)
+      end.to raise_error(Gitingest::InvalidApiEndpointError, /Invalid API endpoint URL/)
     end
 
     it "rejects URLs without host" do
       expect do
         described_class.new(repository: repo_name, api_endpoint: "https:///path")
-      end.to raise_error(ArgumentError, /Invalid API endpoint URL/)
+      end.to raise_error(Gitingest::InvalidApiEndpointError, /Invalid API endpoint URL/)
     end
   end
 end

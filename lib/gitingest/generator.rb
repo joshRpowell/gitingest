@@ -118,12 +118,12 @@ module Gitingest
       uri = URI.parse(endpoint)
 
       unless uri.is_a?(URI::HTTP) && uri.host && !uri.host.empty?
-        raise ArgumentError, "Invalid API endpoint URL"
+        raise InvalidApiEndpointError, "Invalid API endpoint URL"
       end
 
       @logger.info "Using GitHub Enterprise API endpoint: #{endpoint}"
     rescue URI::InvalidURIError
-      raise ArgumentError, "Invalid API endpoint URL"
+      raise InvalidApiEndpointError, "Invalid API endpoint URL"
     end
 
     # Create Octokit client with authentication and API endpoint options
